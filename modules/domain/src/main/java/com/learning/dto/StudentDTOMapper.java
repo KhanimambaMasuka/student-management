@@ -3,6 +3,7 @@ package com.learning.dto;
 import com.learning.Student;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 import org.springframework.data.domain.Page;
 
@@ -17,4 +18,7 @@ public abstract class StudentDTOMapper {
 
     @Mapping(target = "id", ignore = true)
     public abstract Student toStudent(StudentDTO source);
+
+    @Mapping(target = "id", ignore = true)
+    public abstract Student overlay(Student source,@MappingTarget Student target);
 }

@@ -1,5 +1,6 @@
 package com.learning.services;
 
+import com.learning.Student;
 import com.learning.dto.StudentDTO;
 import com.learning.dto.StudentDTOMapper;
 import com.learning.repository.ScoreRepository;
@@ -39,25 +40,43 @@ public class StudentService {
     @Transactional
     public StudentDTO save(StudentDTO dto) {
         //Could be improved,bit clunky
-        ScoreRepository.ScoreSummary sumAndTotalCountOfScoresForStudent =
-                scoreRepository.getSumAndTotalCountOfScoresForStudent(dto.getId());
+        Student source = studentDTOMapper.toStudent(dto);
+        Student existingStudent = null;
 
-        int newSum = 0;
-        int count = 0;
-
-        if (sumAndTotalCountOfScoresForStudent != null) {
-            newSum = sumAndTotalCountOfScoresForStudent.getSumOfScores()
-                    + dto.getCurrentScore();
-            count = sumAndTotalCountOfScoresForStudent.getTotalCount() + 1;
+        if (dto.getId() != null) {
+            existingStudent = studentRepository.findById(dto.getId()).orElse(new Student());
         }
 
-        Integer averageScore = newSum / count;
+        Student target = null;
 
-        dto.setAverageScore(averageScore);
+        if (existingStudent != null && existingStudent.getId() != null) {
+            ScoreRepository.ScoreSummary sumAndTotalCountOfScoresForStudent =
+                    scoreRepository.getSumAndTotalCountOfScoresForStudent(dto.getId());
 
-        return studentDTOMapper
-                .toStudentDTO(studentRepository
-                        .save(studentDTOMapper.toStudent(dto)));
+            int newSum = 0;
+            int count = 0;
+
+            if (sumAndTotalCountOfScoresForStudent != null) {
+                newSum = sumAndTotalCountOfScoresForStudent.getSumOfScores()
+                        + dto.getCurrentScore();
+                count = sumAndTotalCountOfScoresForStudent.getTotalCount() + 1;
+            }
+
+            Integer averageScore = newSum / count;
+
+            target = studentDTOMapper.overlay(source, existingStudent);
+
+            target.setAverageScore(averageScore);
+            target.setId(existingStudent.getId());
+
+            target = studentRepository.save(target);
+        } else {
+            source.setAverageScore(dto.getCurrentScore());
+            studentDTOMapper.overlay(source, target);
+
+            target = studentRepository.save(target);
+        }
+        return studentDTOMapper.toStudentDTO(target);
     }
 
     public void delete(Long id) {
